@@ -18,3 +18,6 @@ secondaryBackgroundColor = "#F0F0F5"
 textColor = "#000000"  # Black
 
 font = "sans serif"
+
+[server]
+runOnSave = true
