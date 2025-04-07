@@ -20,7 +20,7 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Make sure the image file is present
-if not os.path.exists("basement.png"):
+if not os.path.exists("basement.png1"):
     st.error("basement.png not found in this directory.")
     st.stop()
 
@@ -96,4 +96,4 @@ html_code = f"""
 """
 
 # Render the viewer
-components.html(html_code, height=1500, scrolling=False)
+components.html(html_code, height=1501, scrolling=False)
