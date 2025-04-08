@@ -6,7 +6,7 @@ import json
 
 st.set_page_config(layout="wide", page_title="Smart Fire Map")
 
-# Read alarm signal state from shared file
+# Load fire alert flag
 fire_signal_file = "fire_signal.json"
 if os.path.exists(fire_signal_file):
     with open(fire_signal_file, "r") as f:
@@ -15,30 +15,23 @@ if os.path.exists(fire_signal_file):
 else:
     show_alarm = False
 
-# Hide Streamlit UI & default padding
-hide_streamlit_style = """
-<style>
-  header, footer, #MainMenu {
-    visibility: hidden;
-  }
-  .block-container, .main, [data-testid="stAppViewContainer"] {
-    margin: 0;
-    padding: 0;
-  }
-</style>
-"""
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+# Hide Streamlit UI
+st.markdown("""
+    <style>
+    header, footer, #MainMenu {visibility: hidden;}
+    .block-container {padding: 0; margin: 0;}
+    </style>
+""", unsafe_allow_html=True)
 
-# Ensure image exists
+# Load and encode the map image
 if not os.path.exists("basement.png"):
-    st.error("basement.png not found in this directory.")
+    st.error("Map image (basement.png) not found.")
     st.stop()
 
-# Encode image to base64
 with open("basement.png", "rb") as f:
     encoded_string = base64.b64encode(f.read()).decode()
 
-# JavaScript for fire alert bubble
+# Fire alert logic
 fire_alert_js = f"""
 const fireBubble = document.getElementById("fire-alert");
 if (fireBubble) {{
@@ -46,7 +39,7 @@ if (fireBubble) {{
 }}
 """
 
-# JavaScript for alarm icon on map
+# Fire icon on map
 alarm_script = ""
 if show_alarm:
     alarm_script = """
@@ -77,145 +70,104 @@ html_code = f"""
 <html>
 <head>
   <script src="https://openseadragon.github.io/openseadragon/openseadragon.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    * {{
+    html, body {{
       margin: 0;
       padding: 0;
-      box-sizing: border-box;
-      font-family: 'Poppins', sans-serif;
-    }}
-    html, body {{
+      background: #F1E9D9;
       width: 100vw;
       height: 100vh;
-      background: #f5f7fa;
       overflow: hidden;
+      font-family: sans-serif;
     }}
     #openseadragon {{
       width: 100vw;
       height: 100vh;
-      background-color: #f5f7fa;
     }}
     .top-bar {{
       position: fixed;
-      top: 20px;
+      top: 15px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: white;
-      padding: 12px 24px;
-      border-radius: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      z-index: 1000;
     }}
     .top-bar input {{
-      padding: 10px 18px;
-      width: 280px;
-      border-radius: 10px;
+      padding: 8px 20px;
+      width: 250px;
+      border-radius: 16px;
       border: 1px solid #ccc;
-      font-size: 15px;
-    }}
-    .left-nav {{
-      position: fixed;
-      top: 100px;
-      left: 20px;
-      z-index: 9999;
-      background: white;
-      border-radius: 12px;
-      padding: 18px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      font-size: 16px;
-      line-height: 1.6;
+      font-size: 14px;
     }}
     .top-right {{
       position: fixed;
-      top: 20px;
+      top: 15px;
       right: 20px;
-      z-index: 9999;
-      background: rgba(255,255,255,0.85);
-      padding: 10px 16px;
-      border-radius: 16px;
+      z-index: 1000;
       display: flex;
       align-items: center;
-      gap: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      backdrop-filter: blur(6px);
+      gap: 10px;
     }}
-    .bottom-right {{
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 9999;
-      background: white;
-      border: 2px solid #e53935;
+    .top-right img {{
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      border: 1px solid #888;
+    }}
+    #fire-alert {{
+      display: none;
+      background: red;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 12px;
       font-weight: bold;
-      color: #e53935;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      position: absolute;
+      top: -8px;
+      right: -5px;
+      animation: pulse 1s infinite;
     }}
     @keyframes pulse {{
       0% {{ transform: scale(1); }}
-      50% {{ transform: scale(1.15); }}
+      50% {{ transform: scale(1.2); }}
       100% {{ transform: scale(1); }}
     }}
   </style>
 </head>
 <body>
+
   <div id="openseadragon"></div>
+
+  <!-- Search bar -->
   <div class="top-bar">
-    <input type="text" placeholder="Search floors...">
+    <input type="text" placeholder="Search Floors..">
   </div>
-  <div class="left-nav">
-    <div><strong>☰ Navigation</strong></div>
-    <div>🧭 Map Controls</div>
-    <div>📍 Zones</div>
-  </div>
+
+  <!-- Fire alert and icon -->
   <div class="top-right">
     <div style="position: relative;">
       🔥🔥🔥
-      <div id="fire-alert" style="display: none; position: absolute; top: -15px; right: -5px;
-           background: #e53935; color: white; padding: 4px 10px; border-radius: 14px;
-           font-size: 13px; font-weight: 600; animation: pulse 1s infinite;">
-        FIRE!
-      </div>
+      <div id="fire-alert">FIRE!</div>
     </div>
-    <img src="https://via.placeholder.com/32" alt="User" style="
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: 2px solid #ccc;
-    ">
+    <img src="https://via.placeholder.com/32" alt="User">
   </div>
-  <div class="bottom-right">ⓘ</div>
+
   <script>
-    const viewer = OpenSeadragon({
+    const viewer = OpenSeadragon({{
       id: "openseadragon",
       prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
-      tileSources: {
+      tileSources: {{
         type: "image",
         url: "data:image/png;base64,{encoded_string}"
-      },
-      background: "#f5f7fa",
-      letterboxColor: "#f5f7fa",
+      }},
+      background: "#f3ede5",
+      letterboxColor: "#f3ede5",
       homeFillsViewer: true,
-      showNavigator: true,
+      showNavigator: false,
       showNavigationControl: true,
       visibilityRatio: 1.0,
       minZoomLevel: 0.2,
       maxZoomLevel: 25
-    });
-
-    // ✅ Use OpenSeadragon API to disable controls after viewer opens
-    viewer.addOnceHandler('open', function () {
-      viewer.setControlsEnabled(false);
-    });
+    }});
 
     {alarm_script}
     {fire_alert_js}
@@ -224,5 +176,5 @@ html_code = f"""
 </html>
 """
 
-components.html(html_code, height=1501, scrolling=False)
-
+# Render to app
+components.html(html_code, height=1000, scrolling=False)
