@@ -6,6 +6,33 @@ import json
 
 st.set_page_config(layout="wide", page_title="Smart Fire Map")
 
+# Hardcoded login credentials (for demo)
+VALID_USERNAME = "admin"
+VALID_PASSWORD = "password123"
+
+# Session state for authentication
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+# --- LOGIN SCREEN ---
+if not st.session_state.authenticated:
+    st.markdown("<h3 style='text-align: center;'>🔒 Login Required</h3>", unsafe_allow_html=True)
+
+    with st.form("login_form", clear_on_submit=False):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
+
+        if submitted:
+            if username == VALID_USERNAME and password == VALID_PASSWORD:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect username or password.")
+
+    st.stop()  # Prevents the rest of the app from loading
+
+# --- MAIN APP (AFTER LOGIN) ---
 # Load fire alert flag
 fire_signal_file = "fire_signal.json"
 if os.path.exists(fire_signal_file):
@@ -74,7 +101,7 @@ html_code = f"""
     html, body {{
       margin: 0;
       padding: 0;
-      background: #F1E9D9;
+      background: #f1ede4;
       width: 100vw;
       height: 100vh;
       overflow: hidden;
@@ -159,8 +186,8 @@ html_code = f"""
         type: "image",
         url: "data:image/png;base64,{encoded_string}"
       }},
-      background: "#f3ede5",
-      letterboxColor: "#f3ede5",
+      background: "#f1ede4",
+      letterboxColor: "#f1ede4",
       homeFillsViewer: true,
       showNavigator: false,
       showNavigationControl: true,
@@ -176,5 +203,4 @@ html_code = f"""
 </html>
 """
 
-# Render to app
 components.html(html_code, height=1000, scrolling=False)
