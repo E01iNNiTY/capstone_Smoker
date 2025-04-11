@@ -22,3 +22,5 @@ if trigger:
     st.error("🚨 FIRE ALARM IS ACTIVE")
 else:
     st.success("✅ System is clear")
+
+# streamlit run fire_trigger.py --server.port 8502

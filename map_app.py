@@ -3,37 +3,36 @@ import streamlit.components.v1 as components
 import base64
 import os
 import json
+from auth import login
 
 st.set_page_config(layout="wide", page_title="Smart Fire Map")
 
-# Hardcoded login credentials (for demo)
-VALID_USERNAME = "admin"
-VALID_PASSWORD = "password123"
+# 🔐 Authenticate first
+if not login():
+    st.stop()
 
-# Session state for authentication
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+st.markdown("""
+    <style>
+    html, body, [data-testid="stAppViewContainer"], .block-container {
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 100vh !important;
+        overflow: hidden !important;
+        background-color: #f1ede4;
+    }
 
-# --- LOGIN SCREEN ---
-if not st.session_state.authenticated:
-    st.markdown("<h3 style='text-align: center;'>🔒 Login Required</h3>", unsafe_allow_html=True)
+    iframe {
+        display: block;
+        border: none;
+    }
 
-    with st.form("login_form", clear_on_submit=False):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Login")
+    header, footer, #MainMenu {
+        visibility: hidden;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-        if submitted:
-            if username == VALID_USERNAME and password == VALID_PASSWORD:
-                st.session_state.authenticated = True
-                st.rerun()
-            else:
-                st.error("Incorrect username or password.")
-
-    st.stop()  # Prevents the rest of the app from loading
-
-# --- MAIN APP (AFTER LOGIN) ---
-# Load fire alert flag
+# 🔥 Read fire signal state
 fire_signal_file = "fire_signal.json"
 if os.path.exists(fire_signal_file):
     with open(fire_signal_file, "r") as f:
@@ -42,23 +41,23 @@ if os.path.exists(fire_signal_file):
 else:
     show_alarm = False
 
-# Hide Streamlit UI
-st.markdown("""
-    <style>
-    header, footer, #MainMenu {visibility: hidden;}
-    .block-container {padding: 0; margin: 0;}
-    </style>
-""", unsafe_allow_html=True)
-
-# Load and encode the map image
+# 🗺️ Load map
 if not os.path.exists("basement.png"):
     st.error("Map image (basement.png) not found.")
     st.stop()
 
 with open("basement.png", "rb") as f:
-    encoded_string = base64.b64encode(f.read()).decode()
+    map_base64 = base64.b64encode(f.read()).decode()
 
-# Fire alert logic
+# 🏫 Load school logo
+if not os.path.exists("mptv.png"):
+    st.error("Logo image (mptv.png) not found.")
+    st.stop()
+
+with open("mptv.png", "rb") as f:
+    logo_base64 = base64.b64encode(f.read()).decode()
+
+#  Fire alert bubble logic
 fire_alert_js = f"""
 const fireBubble = document.getElementById("fire-alert");
 if (fireBubble) {{
@@ -66,7 +65,7 @@ if (fireBubble) {{
 }}
 """
 
-# Fire icon on map
+# Fire map overlay logic
 alarm_script = ""
 if show_alarm:
     alarm_script = """
@@ -86,12 +85,12 @@ if show_alarm:
 
     viewer.addOverlay(
       alarm,
-      new OpenSeadragon.Point(0.42, 0.31),
+      new OpenSeadragon.Point(0.47, 0.30),
       OpenSeadragon.Placement.CENTER
     );
     """
 
-# Final HTML layout
+
 html_code = f"""
 <!DOCTYPE html>
 <html>
@@ -101,16 +100,23 @@ html_code = f"""
     html, body {{
       margin: 0;
       padding: 0;
-      background: #f1ede4;
-      width: 100vw;
       height: 100vh;
+      width: 100vw;
       overflow: hidden;
+      background: #F0E8DA;
       font-family: sans-serif;
     }}
-    #openseadragon {{
-      width: 100vw;
-      height: 100vh;
+
+    #openseadragon,
+    .openseadragon-container {{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: #f1ede4;
     }}
+
     .top-bar {{
       position: fixed;
       top: 15px;
@@ -118,6 +124,7 @@ html_code = f"""
       transform: translateX(-50%);
       z-index: 1000;
     }}
+
     .top-bar input {{
       padding: 8px 20px;
       width: 250px;
@@ -125,21 +132,24 @@ html_code = f"""
       border: 1px solid #ccc;
       font-size: 14px;
     }}
+
     .top-right {{
       position: fixed;
       top: 15px;
       right: 20px;
       z-index: 1000;
       display: flex;
-      align-items: center;
-      gap: 10px;
+      align-items: flex-start;
+      gap: 14px;
     }}
+
     .top-right img {{
-      width: 30px;
-      height: 30px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border: 1px solid #888;
     }}
+
     #fire-alert {{
       display: none;
       background: red;
@@ -153,6 +163,7 @@ html_code = f"""
       right: -5px;
       animation: pulse 1s infinite;
     }}
+
     @keyframes pulse {{
       0% {{ transform: scale(1); }}
       50% {{ transform: scale(1.2); }}
@@ -164,18 +175,45 @@ html_code = f"""
 
   <div id="openseadragon"></div>
 
-  <!-- Search bar -->
+  <!-- Search -->
   <div class="top-bar">
-    <input type="text" placeholder="Search Floors..">
+    <input type="text" placeholder="Search Floors...">
   </div>
 
-  <!-- Fire alert and icon -->
+  <!-- Fire alert, sensor bar, and logo -->
   <div class="top-right">
-    <div style="position: relative;">
-      🔥🔥🔥
-      <div id="fire-alert">FIRE!</div>
+    <!-- Fire Alert Column -->
+    <div style="display: flex; flex-direction: column; align-items: flex-start;">
+      <!-- Fire Emojis -->
+      <div style="position: relative;">
+        🔥🔥🔥
+        <div id="fire-alert">FIRE!</div>
+      </div>
+
+      <!-- Sensor Bars -->
+      <div id="sensor-status" style="
+        margin-top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 13px;
+        font-weight: 500;
+      ">
+        <div id="heat-status" style="background: #fff; padding: 2px 10px; border-radius: 12px;">🌡️ Heat: Normal</div>
+        <div id="smoke-status" style="background: #fff; padding: 2px 10px; border-radius: 12px;">🌫️ Smoke: Clear</div>
+        <div id="chem-status" style="background: #fff; padding: 2px 10px; border-radius: 12px;">🧪 Chemicals: Safe</div>
+      </div>
     </div>
-    <img src="https://via.placeholder.com/32" alt="User">
+
+  
+<img src="data:image/png;base64,{logo_base64}" alt="Logo" style="
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #888;
+  margin-top: 2px;
+">
+
   </div>
 
   <script>
@@ -184,10 +222,10 @@ html_code = f"""
       prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
       tileSources: {{
         type: "image",
-        url: "data:image/png;base64,{encoded_string}"
+        url: "data:image/png;base64,{map_base64}"
       }},
-      background: "#f1ede4",
-      letterboxColor: "#f1ede4",
+      background: "##F0E8DA",
+      letterboxColor: "##F0E8DA",
       homeFillsViewer: true,
       showNavigator: false,
       showNavigationControl: true,
@@ -198,6 +236,17 @@ html_code = f"""
 
     {alarm_script}
     {fire_alert_js}
+
+    if ({'true' if show_alarm else 'false'}) {{
+      document.getElementById("heat-status").style.background = "#e53935";
+      document.getElementById("heat-status").innerText = "🌡️ Heat: HIGH";
+
+      document.getElementById("smoke-status").style.background = "#e53935";
+      document.getElementById("smoke-status").innerText = "🌫️ Smoke: Detected";
+
+      document.getElementById("chem-status").style.background = "#e53935";
+      document.getElementById("chem-status").innerText = "🧪 Chemicals: Unsafe";
+    }}
   </script>
 </body>
 </html>
