@@ -7,7 +7,13 @@ from auth import login
 
 st.set_page_config(layout="wide", page_title="Smart Fire Map")
 
-# 🔐 Authenticate first
+if "logout" in st.query_params:
+    with open("user_session.json", "w") as f:
+        json.dump({"logged_in": False}, f)
+    st.success("You’ve been logged out, Please Refresh To Log Back In.")
+    st.stop()
+
+
 if not login():
     st.stop()
 
@@ -237,11 +243,11 @@ html_code = f"""
     <span class="icon">🏢</span>
     <span class="label">Floors</span>
   </div>
-  <div class="nav-item">
-    <span class="icon">🚪</span>
-    <span class="label">Logout</span>
-  </div>
+ <div class="nav-item" id="logout-btn">
+  <span class="icon">🚪</span>
+  <span class="label">Logout</span>
 </div>
+  </div>
 
 <!-- Map viewer -->
 <div id="openseadragon"></div>
@@ -358,7 +364,7 @@ html_code = f"""
         type: "image",
         url: "data:image/png;base64,{map_base64}"
       }},
-      background: "##F0E8DA",
+      background: "#F0E8DA",
       letterboxColor: "##F0E8DA",
       homeFillsViewer: true,
       showNavigator: false,
@@ -381,9 +387,15 @@ html_code = f"""
       document.getElementById("chem-status").style.background = "#e53935";
       document.getElementById("chem-status").innerText = "🧪 Chemicals: Unsafe";
     }}
+  
+document.getElementById("logout-btn").addEventListener("click", () => {{
+  window.location.href = "?logout=true";
+}});
+
   </script>
 </body>
 </html>
 """
+
 
 components.html(html_code, height=1500, scrolling=False)
