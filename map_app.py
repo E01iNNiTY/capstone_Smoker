@@ -11,6 +11,7 @@ st.set_page_config(layout="wide", page_title="Smart Fire Map")
 if not login():
     st.stop()
 
+
 st.markdown("""
     <style>
     html, body, [data-testid="stAppViewContainer"], .block-container {
@@ -112,9 +113,9 @@ html_code = f"""
       position: absolute;
       top: 0;
       left: 0;
-      width: 100vw !important;
-      height: 100vh !important;
-      background-color: #f1ede4;
+      width: 100vw;
+      height: 100vh;
+      background-color: #F0E8DA;
     }}
 
     .top-bar {{
@@ -169,41 +170,174 @@ html_code = f"""
       50% {{ transform: scale(1.2); }}
       100% {{ transform: scale(1); }}
     }}
+
+ /* 📦 Collapsed side nav that slides open */
+.side-nav {{
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 20px;  /* Super thin edge */
+  background: rgba(33, 33, 33, 0.5);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+  transition: width 0.3s ease, background 0.3s ease;
+  z-index: 1100;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  padding-top: 80px;
+}}
+
+.side-nav:hover {{
+  width: 200px;
+  background: rgba(33, 33, 33, 0.7);
+}}
+
+.nav-item {{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  color: white;
+  font-size: 16px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}}
+
+.nav-item:hover {{
+  background-color: rgba(255, 255, 255, 0.15);
+}}
+
+.nav-item .icon {{
+  font-size: 20px;
+}}
+
+.nav-item .label {{
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity 0.3s ease;
+}}
+
+.side-nav:hover .label {{
+  opacity: 1;
+}}
+
+
   </style>
 </head>
 <body>
 
-  <div id="openseadragon"></div>
-
-  <!-- Search -->
-  <div class="top-bar">
-    <input type="text" placeholder="Search Floors...">
+<!-- Expandable Google Maps-style Side Nav -->
+<div class="side-nav">
+  <div class="nav-item">
+    <span class="icon">⚙️</span>
+    <span class="label">Settings</span>
   </div>
+  <div class="nav-item">
+    <span class="icon">🏢</span>
+    <span class="label">Floors</span>
+  </div>
+  <div class="nav-item">
+    <span class="icon">🚪</span>
+    <span class="label">Logout</span>
+  </div>
+</div>
 
-  <!-- Fire alert, sensor bar, and logo -->
-  <div class="top-right">
-    <!-- Fire Alert Column -->
-    <div style="display: flex; flex-direction: column; align-items: flex-start;">
-      <!-- Fire Emojis -->
-      <div style="position: relative;">
-        🔥🔥🔥
-        <div id="fire-alert">FIRE!</div>
+<!-- Map viewer -->
+<div id="openseadragon"></div>
+
+
+
+
+<!-- Search -->
+<div class="top-bar" style="
+  backdrop-filter: blur(3px);
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+">
+  <input type="text" placeholder="Search Floors..." style="
+    padding: 8px 16px;
+    border-radius: 16px;
+    border: 1px solid #ccc;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+    outline: none;
+    font-size: 14px;
+  ">
+</div>
+
+
+
+ <!-- Fire alert, sensor bar, and logo -->
+<div class="top-right">
+
+  <!-- Fire Alert Column (left side) -->
+  <div style="display: flex; flex-direction: column; align-items: flex-start;">
+    <!-- Fire Alert Emoji -->
+    <div style="position: relative;">
+      🔥🔥🔥🔥🔥🔥
+      <div id="fire-alert">FIRE!</div>
+    </div>
+
+    <!-- Sensor Bars -->
+    <div id="sensor-status" style="
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: white;
+    ">
+
+      <div id="heat-status" style="
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid white;
+        backdrop-filter: blur(6px);
+      ">
+        🌡️ Heat: Normal
       </div>
 
-      <!-- Sensor Bars -->
-      <div id="sensor-status" style="
-        margin-top: 6px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        font-size: 13px;
-        font-weight: 500;
+      <div id="smoke-status" style="
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid white;
+        backdrop-filter: blur(6px);
       ">
-        <div id="heat-status" style="background: #fff; padding: 2px 10px; border-radius: 12px;">🌡️ Heat: Normal</div>
-        <div id="smoke-status" style="background: #fff; padding: 2px 10px; border-radius: 12px;">🌫️ Smoke: Clear</div>
-        <div id="chem-status" style="background: #fff; padding: 2px 10px; border-radius: 12px;">🧪 Chemicals: Safe</div>
+        🌫️ Smoke: Clear
+      </div>
+
+      <div id="chem-status" style="
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid white;
+        backdrop-filter: blur(6px);
+      ">
+        🧪 Chemicals: Safe
       </div>
     </div>
+  </div>
+
+  <!-- Logo aligned to top right -->
+  <img src="data:image/png;base64,{logo_base64}" alt="Logo" style="
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #fff;
+    background-color: rgba(255,255,255,0.1);
+    padding: 2px;
+    backdrop-filter: blur(6px);
+  ">
+</div>
+
+
 
   
 <img src="data:image/png;base64,{logo_base64}" alt="Logo" style="
@@ -228,7 +362,7 @@ html_code = f"""
       letterboxColor: "##F0E8DA",
       homeFillsViewer: true,
       showNavigator: false,
-      showNavigationControl: true,
+      showNavigationControl: false,
       visibilityRatio: 1.0,
       minZoomLevel: 0.2,
       maxZoomLevel: 25
@@ -252,4 +386,4 @@ html_code = f"""
 </html>
 """
 
-components.html(html_code, height=1000, scrolling=False)
+components.html(html_code, height=1500, scrolling=False)
