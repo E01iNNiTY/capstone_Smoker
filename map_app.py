@@ -252,6 +252,31 @@ html_code = f"""
 <!-- Map viewer -->
 <div id="openseadragon"></div>
 
+<!-- Settings Modal -->
+<div id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" style="
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1200;
+  width: 300px;
+  max-width: 90vw;
+">
+  <h3 id="settings-title" style="margin-top: 0;">Settings</h3>
+  <div style="margin-bottom: 12px;">
+    <label for="map-zoom" style="font-weight: bold;">Default Zoom:</label>
+    <input id="map-zoom" type="number" min="0.1" max="10" step="0.1" value="1" style="width: 100%; padding: 6px; margin-top: 4px;">
+  </div>
+  <div style="display: flex; justify-content: flex-end; gap: 8px;">
+    <button onclick="closeSettings()" style="padding: 6px 12px; background: #ccc; border: none; border-radius: 4px;">Close</button>
+    <button onclick="saveSettings()" style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px;">Save</button>
+  </div>
+</div>
 
 
 
@@ -274,6 +299,8 @@ html_code = f"""
     font-size: 14px;
   ">
 </div>
+
+
 
 
 
@@ -377,21 +404,38 @@ html_code = f"""
     {alarm_script}
     {fire_alert_js}
 
-    if ({'true' if show_alarm else 'false'}) {{
-      document.getElementById("heat-status").style.background = "#e53935";
-      document.getElementById("heat-status").innerText = "🌡️ Heat: HIGH";
+    document.getElementById("logout-btn").addEventListener("click", () => {{
+      window.location.href = "?logout=true";
+    }});
 
-      document.getElementById("smoke-status").style.background = "#e53935";
-      document.getElementById("smoke-status").innerText = "🌫️ Smoke: Detected";
+    // 🎛️ Settings Panel Logic
+    const settingsBtn = document.querySelector('.nav-item:nth-child(1)');
+    const settingsPanel = document.getElementById('settings-panel');
 
-      document.getElementById("chem-status").style.background = "#e53935";
-      document.getElementById("chem-status").innerText = "🧪 Chemicals: Unsafe";
+    function openSettings() {{
+      settingsPanel.style.display = 'block';
+      document.getElementById("map-zoom").focus();
     }}
-  
-document.getElementById("logout-btn").addEventListener("click", () => {{
-  window.location.href = "?logout=true";
-}});
 
+    function closeSettings() {{
+      settingsPanel.style.display = 'none';
+    }}
+
+    function saveSettings() {{
+      const zoomLevel = parseFloat(document.getElementById('map-zoom').value);
+      if (!isNaN(zoomLevel)) {{
+        viewer.viewport.zoomTo(zoomLevel);
+        closeSettings();
+      }}
+    }}
+
+    settingsBtn.addEventListener('click', openSettings);
+
+    document.addEventListener('keydown', (e) => {{
+      if (e.key === 'Escape' && settingsPanel.style.display === 'block') {{
+        closeSettings();
+      }}
+    }});
   </script>
 </body>
 </html>
@@ -399,3 +443,4 @@ document.getElementById("logout-btn").addEventListener("click", () => {{
 
 
 components.html(html_code, height=1500, scrolling=False)
+
