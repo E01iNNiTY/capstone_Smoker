@@ -7,7 +7,7 @@ from auth import login
 
 
 import settings
-
+st.write("MAMA HUEVO")
 config = settings.load_settings()
 default_zoom = config["default_zoom"]
 
