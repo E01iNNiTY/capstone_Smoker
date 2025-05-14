@@ -5,13 +5,6 @@ import os
 import json
 from auth import login
 
-
-import settings
-st.write("MAMA HUEVO")
-config = settings.load_settings()
-default_zoom = config["default_zoom"]
-
-
 st.set_page_config(layout="wide", page_title="Smart Fire Map")
 
 if "logout" in st.query_params:
@@ -23,19 +16,6 @@ if "logout" in st.query_params:
 
 if not login():
     st.stop()
-# ⚙️ Sidebar settings UI
-st.sidebar.header("Map Settings")
-zoom_input = st.sidebar.number_input(
-    "Default Zoom",
-    min_value=0.1,
-    max_value=10.0,
-    step=0.1,
-    value=default_zoom
-)
-if st.sidebar.button("Save Settings"):
-    config["default_zoom"] = zoom_input
-    settings.save_settings(config)
-    st.sidebar.success(f"Saved default zoom = {zoom_input}")
 
 
 st.markdown("""
@@ -272,6 +252,64 @@ html_code = f"""
 <!-- Map viewer -->
 <div id="openseadragon"></div>
 
+<!-- Settings Modal -->
+<div id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" style="
+  display: none;
+  position: fixed;
+  top: 35%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1200;
+  width: 300px;
+  max-width: 90vw;
+">
+  <h3 id="settings-title" style="margin-top: 0;">Settings</h3>
+
+  <!-- Default Zoom -->
+  <div style="margin-bottom: 12px;">
+    <label for="map-zoom" style="font-weight: bold;">Default Zoom:</label>
+    <input id="map-zoom" type="number" min="0.1" max="10" step="0.1" value="1" style="width: 100%; padding: 6px; margin-top: 4px;">
+  </div>
+
+  <!-- Language Selection -->
+  <div style="margin-bottom: 12px;">
+    <label for="language-select" style="font-weight: bold;">Language:</label>
+    <select id="language-select" style="width: 100%; padding: 6px; margin-top: 4px;">
+      <option value="en">English</option>
+      <option value="es">Spanish</option>
+      <option value="fr">French</option>
+      <option value="de">German</option>
+      <option value="pt">Portuguese</option>
+      <option value="zh">Chinese</option>
+      <option value="ar">Arabic</option>
+      <option value="ru">Russian</option>
+    </select>
+  </div>
+
+  <!-- Text Size Selection -->
+  <div style="margin-bottom: 12px;">
+    <label for="text-size-select" style="font-weight: bold;">Text Size:</label>
+    <select id="text-size-select" style="width: 100%; padding: 6px; margin-top: 4px;">
+      <option value="14px">Small</option>
+      <option value="18px">Medium</option>
+      <option value="22px">Large</option>
+      <option value="26px">Extra Large</option>
+    </select>
+  </div>
+
+  <div style="display: flex; justify-content: flex-end; gap: 8px;">
+    <button onclick="closeSettings()" style="padding: 6px 12px; background: #ccc; border: none; border-radius: 4px;">Close</button>
+    <button onclick="saveSettings()" style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px;">Save</button>
+  </div>
+</div>
+
+
+
+
 <!-- Search -->
 <div class="top-bar" style="
   backdrop-filter: blur(3px);
@@ -400,7 +438,34 @@ html_code = f"""
       window.location.href = "?logout=true";
     }});
 
-    
+    // 🎛️ Settings Panel Logic
+    const settingsBtn = document.querySelector('.nav-item:nth-child(1)');
+    const settingsPanel = document.getElementById('settings-panel');
+
+    function openSettings() {{
+      settingsPanel.style.display = 'block';
+      document.getElementById("map-zoom").focus();
+    }}
+
+    function closeSettings() {{
+      settingsPanel.style.display = 'none';
+    }}
+
+    function saveSettings() {{
+      const zoomLevel = parseFloat(document.getElementById('map-zoom').value);
+      if (!isNaN(zoomLevel)) {{
+        viewer.viewport.zoomTo(zoomLevel);
+        closeSettings();
+      }}
+    }}
+
+    settingsBtn.addEventListener('click', openSettings);
+
+    document.addEventListener('keydown', (e) => {{
+      if (e.key === 'Escape' && settingsPanel.style.display === 'block') {{
+        closeSettings();
+      }}
+    }});
   </script>
 </body>
 </html>
@@ -408,4 +473,3 @@ html_code = f"""
 
 
 components.html(html_code, height=1500, scrolling=False)
-
